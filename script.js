@@ -1,3 +1,10 @@
+// Initialize EmailJS when page loads
+window.addEventListener('DOMContentLoaded', () => {
+    if (typeof emailjs !== 'undefined') {
+        emailjs.init('sE4W1UEA9SpSgtypY');
+    }
+});
+
 // Theme Toggle Functionality
 const themeToggle = document.getElementById('theme-toggle');
 const themeIcon = document.getElementById('theme-icon');
@@ -431,30 +438,67 @@ if (contactForm) {
         btnLoader.style.display = 'inline-block';
         submitBtn.disabled = true;
         
-        // Simulate form submission (replace with actual API call)
+        // Send email using EmailJS
         try {
-            // Create mailto link
-            const mailtoLink = `mailto:pratek.aiml@gmail.com?subject=${encodeURIComponent(formData.subject)}&body=${encodeURIComponent(`Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`)}`;
+            // Check if EmailJS is loaded
+            if (typeof emailjs === 'undefined') {
+                throw new Error('EmailJS library not loaded. Please refresh the page.');
+            }
             
-            // Simulate delay
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // Ensure EmailJS is initialized
+            if (!emailjs.init) {
+                emailjs.init('sE4W1UEA9SpSgtypY');
+            }
             
-            // Open email client
-            window.location.href = mailtoLink;
+            // Prepare email template parameters
+            const templateParams = {
+                from_name: formData.name,
+                from_email: formData.email,
+                subject: formData.subject,
+                message: formData.message,
+                to_email: 'pratek.aiml@gmail.com',
+                reply_to: formData.email
+            };
             
-            // Show success message
-            showFormFeedback('Message sent successfully! I\'ll get back to you soon.', 'success');
+            // Send email using EmailJS
+            const response = await emailjs.send(
+                'service_5r5h3vr',  // Service ID
+                'template_6rbw72z',   // Template ID
+                templateParams
+            );
             
-            // Reset form
-            contactForm.reset();
-            Object.keys(validationRules).forEach(fieldName => {
-                const field = document.getElementById(fieldName);
-                field.classList.remove('error', 'success');
-                document.getElementById(`${fieldName}-error`).classList.remove('show');
-            });
+            // Check if email was sent successfully
+            if (response.status === 200) {
+                // Show success message
+                showFormFeedback('Message sent successfully! I\'ll get back to you soon.', 'success');
+                
+                // Reset form
+                contactForm.reset();
+                Object.keys(validationRules).forEach(fieldName => {
+                    const field = document.getElementById(fieldName);
+                    if (field) {
+                        field.classList.remove('error', 'success');
+                    }
+                    const errorElement = document.getElementById(`${fieldName}-error`);
+                    if (errorElement) {
+                        errorElement.classList.remove('show');
+                    }
+                });
+            } else {
+                throw new Error('Failed to send email');
+            }
             
         } catch (error) {
-            showFormFeedback('An error occurred. Please try again or email me directly.', 'error');
+            console.error('EmailJS Error:', error);
+            let errorMessage = 'An error occurred. Please try again.';
+            
+            if (error.text) {
+                errorMessage = `Error: ${error.text}`;
+            } else if (error.message) {
+                errorMessage = `Error: ${error.message}`;
+            }
+            
+            showFormFeedback(errorMessage + ' You can also email me directly at pratek.aiml@gmail.com', 'error');
         } finally {
             // Reset button state
             btnText.style.display = 'inline';
